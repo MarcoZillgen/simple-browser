@@ -143,7 +143,3 @@ webViewElement.addEventListener("blur", function () {
 });
 
 loadPage(tabs[currentTab].url);
- 
-setInterval(() => {
-  window.focus();
-}, 1000);

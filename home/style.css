@@ -1,0 +1,25 @@
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  margin: 0;
+  gap: 20px;
+  padding: 20px;
+  overflow: hidden;
+  font-family: "Inter", sans-serif;
+  background-color: #1b1b1b;
+  color: white;
+  justify-content: center;
+  align-items: center;
+
+  div {
+    height: 75px;
+    display: grid;
+    width: max-content;
+    padding: 0 50px;
+    border-radius: 10px;
+    place-items: center;
+    font-size: 2rem;
+    background-color: #333;
+  }
+}

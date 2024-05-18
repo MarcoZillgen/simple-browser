@@ -4,60 +4,81 @@ const closeButton = document.getElementById("closeButton");
 const webViewElement = document.getElementById("webView");
 const tabsContainer = document.getElementById("tabsContainer");
 
-const START_SITE = "https://www.google.com";
+// startsite is saved in home/index.html
+const currentDir = __dirname;
+const START_SITE = `file://${currentDir}/home/index.html`;
+
+// const START_SITE = "https://www.google.com";
+
+const commands = {};
 
 const tabs = [
   {
     url: START_SITE,
-    title: "Google",
-  },
-  {
-    url: "https://www.youtube.com",
-    title: "YouTube",
-  },
-  {
-    url: "https://www.github.com",
-    title: "Github",
   },
 ];
 
 let currentTab = 0;
 
-const switchTab = () => {
-  currentTab = (currentTab + 1) % tabs.length;
+const hideTabs = () => {
+  tabsContainer.classList.add("hidden");
+};
+
+const showTabs = () => {
+  tabsContainer.innerHTML = "";
+  tabs.forEach((tab, index) => {
+    const tabElement = document.createElement("div");
+    tabElement.classList.add("tab");
+    if (index === currentTab) tabElement.classList.add("active");
+    const image = document.createElement("img");
+    image.src = `https://www.google.com/s2/favicons?sz=256&domain_url=${tab.url}`;
+    image.onerror = () => {
+      image.src = "assets/file.svg";
+    };
+    tabElement.appendChild(image);
+    const title = document.createElement("span");
+    title.className = "tab-title";
+    title.innerText = tab.title;
+    tabElement.appendChild(title);
+    tabElement.addEventListener("click", () => {
+      currentTab = index;
+      loadPage(tab.url);
+      showTabs();
+    });
+    tabsContainer.appendChild(tabElement);
+  });
+  tabsContainer.classList.remove("hidden");
+};
+
+const switchTab = (index) => {
+  currentTab = index || (currentTab + 1) % tabs.length;
   loadPage(tabs[currentTab].url);
-
-  tabsContainer.innerHTML = tabs
-    .map((tab, index) => {
-      return `<div class="tab ${
-        index === currentTab ? "active" : ""
-      }" onclick="loadPage('${tab.url}');">${tab.title}</div>`;
-    })
-    .join("");
-
+  showTabs();
   window.focus();
 };
 
 const deleteTab = (index) => {
   tabs.splice(index, 1);
-  if (tabs.length === 0) tabs.push(START_SITE);
-  currentTab = Math.max(0, currentTab - 1);
+  if (tabs.length === 0) addTab(START_SITE);
+  currentTab = Math.min(currentTab, tabs.length - 1);
   loadPage(tabs[currentTab].url);
 };
 
 const addTab = (url) => {
-  tabs.push(url);
+  tabs.push({ url, title: "New Tab" });
   currentTab = tabs.length - 1;
   loadPage(url);
 };
 
 const showHub = () => {
-  if (urlInput.value.includes("https://www.google.com/search?q="))
+  urlInput.value = webViewElement.src;
+  if (urlInput.value.includes("https://www.google.com/search?q=")) {
     urlInput.value = urlInput.value.replace(
       "https://www.google.com/search?q=",
       ""
     );
-  urlInput.value = urlInput.value.split("%20").join(" ");
+    urlInput.value = urlInput.value.split("%20").join(" ");
+  }
   centerHub.classList.remove("hidden");
   urlInput.focus();
   urlInput.select();
@@ -76,8 +97,17 @@ const keybinds = {
   escape: hideHub,
   "ctrl+tab": switchTab,
   "ctrl+r": () => webViewElement.reload(),
-  "ctrl+w": () => deleteTab(currentTab),
-  "ctrl+t": () => addTab(START_SITE),
+  "ctrl+w": () => {
+    deleteTab(currentTab);
+    showTabs();
+  },
+  "ctrl+t": () => {
+    addTab(START_SITE);
+    switchTab(tabs.length - 1);
+    showTabs();
+  },
+  "ctrl+z": () => webViewElement.goBack(),
+  "ctrl+y": () => webViewElement.goForward(),
 };
 
 window.addEventListener("keydown", function (event) {
@@ -94,20 +124,14 @@ window.addEventListener("keydown", function (event) {
   }
 });
 
-const mousebinds = {
-  3: () => {
-    window.history.forward();
-    window.focus();
-  },
-  4: () => {
-    window.history.back();
-    window.focus();
-  },
-};
+window.addEventListener("keyup", (e) => {
+  if (e.key === "Control") hideTabs();
+});
 
-window.addEventListener("mousedown", function (event) {
-  const action = mousebinds[event.button];
-  if (action) action();
+webViewElement.addEventListener("click", () => {
+  hideTabs();
+  hideHub();
+  window.focus();
 });
 
 // update url when navigating
@@ -130,16 +154,50 @@ const loadPage = (url) => {
 
   // hide hub
   centerHub.classList.add("hidden");
+  if (url[0] === "#") {
+    const commandKey = url.slice(1);
+    const currentUrl = webViewElement.src;
+    return (commands[commandKey] = () => {
+      loadPage(currentUrl);
+    });
+  }
+  if (Object.keys(commands).includes(url)) return commands[url]();
   if (url[0] === ":") url = `http://localhost${url}`;
-  else if (!url.includes(".")) url = `https://www.google.com/search?q=${url}`;
-  if (!url.includes("://")) url = `https://${url}`;
+  else if (url[0] === "_") {
+    addTab(url.slice(1));
+    switchTab(tabs.length - 1);
+    showTabs();
+    return;
+  } else if (
+    (!url.includes(".") || url.includes(" ")) &&
+    !url.includes("localhost") &&
+    !url.includes("file://") &&
+    !url.includes("https://") &&
+    !url.includes("http://")
+  )
+    url = `https://www.google.com/search?q=${url}`;
+  else if (!url.includes("://")) url = `https://${url}`;
 
+  tabs[currentTab].url = url;
   webViewElement.src = url;
 };
 
+webViewElement.addEventListener("page-title-updated", function (event) {
+  tabs[currentTab].title =
+    event.title.length > 9 ? event.title.slice(0, 9) + "..." : event.title;
+});
+
 // always keep the webview focused
-webViewElement.addEventListener("blur", function () {
+window.addEventListener("focusout", () => {
+  window.focus();
+});
+
+document.body.addEventListener("focusout", () => {
   window.focus();
 });
 
 loadPage(tabs[currentTab].url);
+
+setInterval(() => {
+  console.log(document.activeElement);
+}, 1000);

@@ -94,6 +94,10 @@ const keybinds = {
   "ctrl+k": () => {
     centerHub.classList.contains("hidden") ? showHub() : hideHub();
   },
+  "ctrl+#": () => {
+    centerHub.classList.contains("hidden") ? showHub() : hideHub();
+    urlInput.value = "#";
+  },
   escape: hideHub,
   "ctrl+tab": switchTab,
   "ctrl+r": () => webViewElement.reload(),
@@ -156,12 +160,13 @@ const loadPage = (url) => {
   centerHub.classList.add("hidden");
   if (url[0] === "#") {
     const commandKey = url.slice(1);
+    if (commands[commandKey]) return commands[commandKey]();
+
     const currentUrl = webViewElement.src;
     return (commands[commandKey] = () => {
       loadPage(currentUrl);
     });
   }
-  if (Object.keys(commands).includes(url)) return commands[url]();
   if (url[0] === ":") url = `http://localhost${url}`;
   else if (url[0] === "_") {
     addTab(url.slice(1));
@@ -199,5 +204,5 @@ document.body.addEventListener("focusout", () => {
 loadPage(tabs[currentTab].url);
 
 setInterval(() => {
-  console.log(document.activeElement);
+  window.focus();
 }, 1000);

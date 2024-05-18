@@ -51,7 +51,7 @@ const showTabs = () => {
 };
 
 const switchTab = (index) => {
-  currentTab = index || (currentTab + 1) % tabs.length;
+  currentTab = index;
   loadPage(tabs[currentTab].url);
   showTabs();
   window.focus();
@@ -71,6 +71,8 @@ const addTab = (url) => {
 };
 
 const showHub = () => {
+  hideTabs();
+
   urlInput.value = webViewElement.src;
   if (urlInput.value.includes("https://www.google.com/search?q=")) {
     urlInput.value = urlInput.value.replace(
@@ -99,7 +101,15 @@ const keybinds = {
     urlInput.value = "#";
   },
   escape: hideHub,
-  "ctrl+tab": switchTab,
+  "ctrl+tab": () => {
+    switchTab((currentTab + 1) % tabs.length);
+  },
+  "ctrl+arrowright": () => {
+    switchTab((currentTab + 1) % tabs.length);
+  },
+  "ctrl+arrowleft": () => {
+    switchTab((currentTab - 1 + tabs.length) % tabs.length);
+  },
   "ctrl+r": () => webViewElement.reload(),
   "ctrl+w": () => {
     deleteTab(currentTab);
